@@ -30,6 +30,8 @@
 ### 部署
 - 常规部署
 
+目前kong支持数据库模式和无数据库模式两种方式进行部署，但无数据模式可能有部分插件不支持，如oauth2（据官方文档）
+
 - 集群化部署(因没有多台机器，故此处测试采用docker)
 1. need a load-balancer in front of Kong cluster to distribute traffic across your available nodes.
 2. a Kong cluster means that those nodes will share the same configuration
@@ -57,7 +59,13 @@ curl -X POST http://localhost:8001/routes/{routeId}/plugins \
 curl -X POST http://localhost:8001/routes/{routeId}/plugins \
 --data "name=jwt"
 ```
-4. 更新服务：
+4. 添加服务：
+```
+curl -i -X POST http://localhost:8001/services/ \
+-d 'name=xxxx' \
+-d 'url=http://www.runoob.com'
+```
+5. 更新服务：
 ```
 curl -s -X PATCH --url http://192.168.0.184:8001/services/linuxops_server \
 -d 'name=linuxops_server_patch' \
@@ -66,7 +74,7 @@ curl -s -X PATCH --url http://192.168.0.184:8001/services/linuxops_server \
  | python -m json.tool
  #修改服务名称，但服务id不变
 ```
-5. 更新或创建服务：
+6. 更新或创建服务：
 ```
 curl -s -X PUT --url http://192.168.0.184:8001/services/linuxops_server_put \
 -d 'name=linuxops_server_patch' \
@@ -75,7 +83,7 @@ curl -s -X PUT --url http://192.168.0.184:8001/services/linuxops_server_put \
  | python -m json.tool
  #若服务存在，则更新，若服务不存在，则创建
  ```
- 6. 删除服务：
+ 7. 删除服务：
  ```
  curl -i  -X DELETE --url http://192.168.0.184:8001/services/b6094754-07da-4c31-bb95-0a7caf5e6c0b
  ```
@@ -125,6 +133,15 @@ curl -s -X PUT --url http://192.168.0.184:8001/services/linuxops_server_put \
  ```
  curl -s http://192.168.0.184:8001/routes/f8ef8876-9681-4629-a2ee-d7fac8a8094a/service | python -m json.tool
  ```
+ 8. 配置upstream
+ ```
+ curl -X POST http://localhost:8001/upstreams --data "name=helloUpstream"
+ ```
+ 9. 配置target
+ ```
+ $ curl -X POST http://localhost:8001/upstreams/hello/targets --data "target=localhost:3000" --data "weight=100"
+ ```
+==更多相关操作参考官方文档==
 - HMAC:
 ```
 #Enable the plugin on service
@@ -146,7 +163,18 @@ $ curl -X POST http://kong:8001/consumers/{consumer}/hmac-auth \
 ```
 - JWT:
 ```
-
+#创建一个service
+curl -i -X POST http://192.168.2.185:8001/services/ -d 'name=sampleapp' -d 'url=http://192.168.2.185:3002'
+#创建一个route
+curl -s -X POST --url http://localhost:8001/routes -d 'methods=GET' -d 'service.id=ed2f61b5-f639-40f3-a824-b6b78901fbca' | python3 -m json.tool
+#在service上启用JWT插件
+curl -X POST http://192.168.2.185:8001/services/sampleapp/plugins --data "name=jwt"
+#在route上启用JWT插件
+curl -X POST http://192.168.2.185:8001/routes/2bd45360-7c8d-415a-85ae-b269bff54357/plugins --data "name=jwt"
+#创建consumer
+curl -X POST http://localhost:8001/consumers --data "username=huang"
+#使用返回的参数生成jwt(jwt官网或者自己写程序生成)
+curl http://localhost:8000/ -H 'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ2Y252WVNGelRJR3lNeHpLU2duTlUwdXZ4aXhkWVdCOSJ9.3iL4sXgZyvRx2XtIe2X73yplfmSSu1WPGcvyhwq7TVE'
 ```
 - OAUTH2:
 ```
